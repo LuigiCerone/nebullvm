@@ -68,6 +68,8 @@ from nebullvm.tools.utils import (
     check_input_data,
     is_data_subscriptable,
     extract_info_from_data,
+    get_original_model_device,
+    restore_original_model_device,
 )
 from tabulate import tabulate
 
@@ -183,6 +185,11 @@ class SpeedsterRootOp(Operation):
             self.model = self.fetch_model_op.get_model()
             self.data = self.fetch_data_op.get_data()
 
+            dl_framework = get_dl_framework(self.model)
+            original_device_model = get_original_model_device(
+                self.model, dl_framework
+            )
+
             if isinstance(self.data, (DataLoader, tf.data.Dataset)):
                 try:
                     self.data = DataManager.from_dataloader(self.data)
@@ -280,8 +287,6 @@ class SpeedsterRootOp(Operation):
                         "arrays,\n"
                         "depending on the framework used.\n"
                     )
-
-            dl_framework = get_dl_framework(self.model)
 
             if metric_drop_ths is not None and metric_drop_ths <= 0:
                 metric_drop_ths = None
@@ -519,6 +524,11 @@ class SpeedsterRootOp(Operation):
 
                 else:
                     self.optimal_model = optimized_models[0][0]
+
+            if original_device_model:
+                restore_original_model_device(
+                    self.model, original_device_model
+                )
 
     def _optimize(
         self,

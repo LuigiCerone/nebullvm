@@ -38,6 +38,7 @@ from nebullvm.tools.pytorch import (
 from nebullvm.tools.tf import (
     extract_info_from_tf_data,
     get_output_info_tf,
+    tensorflow_is_gpu_available,
 )
 
 
@@ -244,6 +245,23 @@ def check_device(device: Optional[str]) -> Device:
             device = Device(DeviceType.CPU)
 
     return device
+
+
+def get_original_model_device(
+    model: Any, dl_framework: DeepLearningFramework
+) -> Union[Device, None]:
+    if dl_framework == DeepLearningFramework.PYTORCH:
+        return Device.from_str(str(model.device))
+    elif dl_framework == DeepLearningFramework.TENSORFLOW:
+        temp_device_str = "gpu:0" if tensorflow_is_gpu_available() else "cpu"
+        return Device.from_str(temp_device_str)
+    else:
+        return None
+
+
+def restore_original_model_device(model: Any, device: Device):
+    if isinstance(model, torch.nn.Module):
+        model.to(device.to_torch_format())
 
 
 def get_gpu_compute_capability(gpu_idx: int) -> float:
